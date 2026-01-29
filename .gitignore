@@ -1,0 +1,13 @@
+# Ignorar ambiente virtual
+venv/
+.env
+
+# Ignorar arquivos compilados do Python
+__pycache__/
+*.pyc
+
+# Ignorar banco de dados local (opcional, se quiser preservar os dados do zero)
+*.db
+
+# Ignorar pastas de uploads (para não subir vídeos pesados de teste)
+uploads/
