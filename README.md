@@ -1,4 +1,4 @@
-# 🎬 Editor de Vídeo Automatizado
+# 🎬 Editor de Vídeo Automatizado (Em Processo)
 
 Ferramenta desenvolvida em Python para processar e editar vídeos automaticamente.
 
