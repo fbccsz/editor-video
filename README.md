@@ -37,12 +37,22 @@ Opções úteis:
 ```bash
 python criador_video.py --help
 python criador_video.py --imagens ./imagens --audio locucao.mp3 \
-  --saida ./dist/video.mp4 --largura 1920 --altura 1080 --fps 24
+  --saida ./dist/video.mp4 --largura 1920 --altura 1080 --fps 24 \
+  --preset fast --crf 18
 ```
 
 As imagens suportadas (`PNG`, `JPG`, `JPEG` e `WEBP`) são ordenadas pelo nome,
 dividindo igualmente a duração da locução entre elas. Cada imagem é recortada
-ao centro para preencher a resolução escolhida.
+ao centro para preencher a resolução escolhida. O processamento prepara cada
+imagem uma única vez antes da codificação, usa H.264 com pixel format compatível
+com players comuns e AAC a 192 kbps. `--crf 18` prioriza qualidade; valores
+maiores geram arquivos menores, e `--preset ultrafast` acelera a exportação em
+troca de compressão menos eficiente.
+
+Na versão web, a opção **Alta · 1080p** usa bitrate de vídeo de 12 Mbps e
+**Rápida · 720p** usa 6 Mbps. Quando há áudio, a duração da trilha é dividida
+entre as imagens e o áudio é conectado somente ao arquivo final, sem tocar nos
+alto-falantes durante a exportação.
 
 ## Publicação
 
