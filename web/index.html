@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Demonstração web do Editor de Vídeo Automatizado">
+  <title>Editor de Vídeo Automatizado</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">Editor de Vídeo Automatizado</p>
+      <h1>Transforme imagens em um vídeo.</h1>
+      <p class="subtitle">Faça um teste diretamente no navegador. Nenhum arquivo é enviado para um servidor.</p>
+    </header>
+
+    <section class="panel">
+      <label for="images">Imagens (a ordem dos arquivos será preservada)</label>
+      <input id="images" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+      <label for="audio">Locução opcional</label>
+      <input id="audio" type="file" accept="audio/*">
+      <div class="options">
+        <label>Duração por imagem (s)<input id="duration" type="number" min="1" max="30" step="0.5" value="3"></label>
+        <label>Formato<select id="format"><option value="16:9">16:9 (paisagem)</option><option value="9:16">9:16 (vertical)</option><option value="1:1">1:1 (quadrado)</option></select></label>
+      </div>
+      <button id="render" type="button">Gerar vídeo de teste</button>
+      <p id="status" role="status">Selecione pelo menos uma imagem para começar.</p>
+    </section>
+
+    <section class="panel preview-panel">
+      <h2>Pré-visualização</h2>
+      <video id="preview" controls playsinline></video>
+      <a id="download" class="download" hidden>Baixar vídeo</a>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,76 +1,135 @@
-import PIL.Image
+"""Cria um vídeo a partir de imagens e uma locução.
 
-if not hasattr(PIL.Image, 'ANTIALIAS'):
-    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+Uso:
+    python criador_video.py --imagens ./imagens --audio locucao.mp3
+"""
 
-# ---------------------------------------------------
+from __future__ import annotations
 
-from moviepy.editor import *
-import os
+import argparse
+import logging
+from pathlib import Path
+from typing import Iterable
 
-# --- CONFIGURAÇÕES --- (pode alterar como preferir)
-PASTA_IMAGENS = "./imagens" 
-ARQUIVO_AUDIO = "locucao.mp3"
-NOME_FINAL = "video_pronto.mp4"
-RESOLUCAO = (1920, 1080)
+from PIL import Image
+from moviepy.editor import AudioFileClip, ImageClip, concatenate_videoclips
 
-#Redimensionamento do determinado conteúdo
-def redimensionar_para_preencher(clip, target_resolution): 
-    w_target, h_target = target_resolution
-    clip_resized = clip.resize(height=h_target)
-    if clip_resized.w < w_target:
-        clip_resized = clip.resize(width=w_target)
-        
-    return clip_resized.crop(x1=clip_resized.w/2 - w_target/2, 
-                             y1=clip_resized.h/2 - h_target/2, 
-                             width=w_target, height=h_target)
 
-# Criador do vídeo
-def criar_video():
-    print("--- INICIANDO PROCESSAMENTO DE VÍDEO ---")
-    
-    if not os.path.exists(PASTA_IMAGENS) or not os.path.exists(ARQUIVO_AUDIO):
-        print(f"ERRO: Verifique se a pasta '{PASTA_IMAGENS}' e o arquivo '{ARQUIVO_AUDIO}' existem.")
-        return
+LOGGER = logging.getLogger("criador_video")
+EXTENSOES_IMAGEM = {".png", ".jpg", ".jpeg", ".webp"}
+RESOLUCAO_PADRAO = (1920, 1080)
 
+# MoviePy 1.0.3 still references this Pillow 9.x name.
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS
+
+
+def redimensionar_para_preencher(clip, target_resolution: tuple[int, int]):
+    """Redimensiona e recorta o clipe para preencher a resolução informada."""
+    largura, altura = target_resolution
+    escala = max(largura / clip.w, altura / clip.h)
+    redimensionado = clip.resize(escala)
+    return redimensionado.crop(
+        x_center=redimensionado.w / 2,
+        y_center=redimensionado.h / 2,
+        width=largura,
+        height=altura,
+    )
+
+
+def listar_imagens(pasta: Path) -> list[Path]:
+    """Retorna imagens suportadas em ordem alfabética."""
+    return sorted(
+        caminho
+        for caminho in pasta.iterdir()
+        if caminho.is_file() and caminho.suffix.lower() in EXTENSOES_IMAGEM
+    )
+
+
+def criar_video(
+    pasta_imagens: str | Path = "imagens",
+    arquivo_audio: str | Path = "locucao.mp3",
+    nome_final: str | Path = "video_pronto.mp4",
+    resolucao: tuple[int, int] = RESOLUCAO_PADRAO,
+    fps: int = 24,
+) -> Path:
+    """Monta o vídeo e retorna o caminho do arquivo gerado."""
+    pasta = Path(pasta_imagens)
+    audio_path = Path(arquivo_audio)
+    output_path = Path(nome_final)
+
+    if not pasta.is_dir():
+        raise FileNotFoundError(f"Pasta de imagens não encontrada: {pasta}")
+    if not audio_path.is_file():
+        raise FileNotFoundError(f"Arquivo de áudio não encontrado: {audio_path}")
+    if len(resolucao) != 2 or any(valor <= 0 for valor in resolucao):
+        raise ValueError("A resolução deve conter largura e altura positivas.")
+    if fps <= 0:
+        raise ValueError("O FPS deve ser maior que zero.")
+
+    imagens = listar_imagens(pasta)
+    if not imagens:
+        raise ValueError(f"Nenhuma imagem suportada encontrada em {pasta}")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    clips = []
     try:
-        audio_clip = AudioFileClip(ARQUIVO_AUDIO)
-        duracao_total = audio_clip.duration
-        print(f"Áudio carregado: {duracao_total:.2f} segundos.")
-    except Exception as e:
-        print(f"Erro ao ler áudio: {e}")
-        return
+        with AudioFileClip(str(audio_path)) as audio:
+            if audio.duration <= 0:
+                raise ValueError("O áudio não possui duração válida.")
 
-    arquivos = [f for f in os.listdir(PASTA_IMAGENS) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-    arquivos.sort()
-    
-    qtd_imagens = len(arquivos)
-    if qtd_imagens == 0:
-        print("Nenhuma imagem encontrada na pasta!")
-        return
+            duracao = audio.duration / len(imagens)
+            for imagem in imagens:
+                clip = ImageClip(str(imagem)).set_duration(duracao)
+                clips.append(redimensionar_para_preencher(clip, resolucao))
 
-    tempo_por_imagem = duracao_total / qtd_imagens
-    print(f"Encontradas {qtd_imagens} imagens. Cada uma terá {tempo_por_imagem:.2f} segundos.")
+            video = concatenate_videoclips(clips, method="compose").set_audio(audio)
+            try:
+                video.write_videofile(
+                    str(output_path),
+                    fps=fps,
+                    codec="libx264",
+                    audio_codec="aac",
+                    logger=None,
+                )
+            finally:
+                video.close()
+    finally:
+        for clip in clips:
+            clip.close()
 
-    clips_visuais = []
-    print("Processando imagens (isso pode demorar)...")
-    
-    for i, imagem_nome in enumerate(arquivos):
-        caminho_img = os.path.join(PASTA_IMAGENS, imagem_nome)
-        clip = ImageClip(caminho_img).set_duration(tempo_por_imagem)
-        clip = redimensionar_para_preencher(clip, RESOLUCAO)
-        clips_visuais.append(clip)
-        print(f"[{i+1}/{qtd_imagens}] Processada: {imagem_nome}")
+    return output_path
 
-    print("Renderizando vídeo final... Aguarde.")
-    video_final = concatenate_videoclips(clips_visuais, method="compose")
-    video_final = video_final.set_audio(audio_clip)
-    
-    # configurações do tipo do vídeo (pode ser alterada de acordo com a sua preferência)
-    #----------------------------------------------------------------------------------
-    video_final.write_videofile(NOME_FINAL, fps=24, codec='libx264', audio_codec='aac')
-    #----------------------------------------------------------------------------------
-    print(f"\nSUCESSO! Vídeo salvo como: {NOME_FINAL}")
+
+def _parse_args(args: Iterable[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--imagens", default="imagens", help="Pasta com as imagens.")
+    parser.add_argument("--audio", default="locucao.mp3", help="Arquivo de locução.")
+    parser.add_argument("--saida", default="video_pronto.mp4", help="Vídeo de saída.")
+    parser.add_argument("--largura", type=int, default=1920)
+    parser.add_argument("--altura", type=int, default=1080)
+    parser.add_argument("--fps", type=int, default=24)
+    return parser.parse_args(args)
+
+
+def main(args: Iterable[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    options = _parse_args(args)
+    try:
+        output = criar_video(
+            options.imagens,
+            options.audio,
+            options.saida,
+            (options.largura, options.altura),
+            options.fps,
+        )
+    except (FileNotFoundError, ValueError, OSError) as error:
+        LOGGER.error("Erro: %s", error)
+        return 1
+
+    LOGGER.info("Vídeo salvo como: %s", output)
+    return 0
+
 
 if __name__ == "__main__":
-    criar_video()
+    raise SystemExit(main())
