@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Crie vídeos com imagens e áudio diretamente no navegador.">
   <title>Frameflow — Editor de vídeo</title>
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=4">
 </head>
 <body>
   <main class="app-shell">
@@ -65,7 +65,14 @@
               <option value="9:16">9:16 · Vertical</option>
               <option value="1:1">1:1 · Quadrado</option>
             </select>
-            <small id="format-help">1280 × 720 px</small>
+            <small id="format-help">1920 × 1080 px</small>
+          </label>
+          <label class="field">Qualidade
+            <select id="quality">
+              <option value="high">Alta · 1080p</option>
+              <option value="standard">Rápida · 720p</option>
+            </select>
+            <small>Mais qualidade ou exportação mais rápida.</small>
           </label>
         </div>
 
@@ -95,6 +102,6 @@
 
     <footer><span>frameflow</span><span>Feito para testar, criar e compartilhar.</span></footer>
   </main>
-  <script src="./app.js?v=3"></script>
+  <script src="./app.js?v=4"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ const durationInput = document.querySelector("#duration");
 const durationHelp = document.querySelector("#duration-help");
 const formatInput = document.querySelector("#format");
 const formatHelp = document.querySelector("#format-help");
+const qualityInput = document.querySelector("#quality");
 const renderButton = document.querySelector("#render");
 const clearButton = document.querySelector("#clear");
 const status = document.querySelector("#status");
@@ -17,13 +18,15 @@ const download = document.querySelector("#download");
 let generatedUrl;
 let imageFiles = [];
 let audioFile;
+let imagePreviewUrls = [];
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-function dimensions(format) {
-  if (format === "9:16") return [720, 1280];
-  if (format === "1:1") return [1080, 1080];
-  return [1280, 720];
+function dimensions(format, quality) {
+  const high = quality !== "standard";
+  if (format === "9:16") return high ? [1080, 1920] : [720, 1280];
+  if (format === "1:1") return high ? [1080, 1080] : [720, 720];
+  return high ? [1920, 1080] : [1280, 720];
 }
 
 function formatBytes(bytes) {
@@ -80,12 +83,24 @@ function updateRenderState() {
 }
 
 function renderImageList() {
-  imageList.innerHTML = imageFiles.map((file, index) => {
-    const url = URL.createObjectURL(file);
-    const card = `<div class="file-card"><img src="${url}" alt=""><span class="file-number">${index + 1}</span><span title="${file.name}">${file.name}</span></div>`;
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return card;
-  }).join("");
+  imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  imagePreviewUrls = imageFiles.map((file) => URL.createObjectURL(file));
+  imageList.replaceChildren();
+  imageFiles.forEach((file, index) => {
+    const card = document.createElement("div");
+    const image = document.createElement("img");
+    const number = document.createElement("span");
+    const name = document.createElement("span");
+    card.className = "file-card";
+    image.src = imagePreviewUrls[index];
+    image.alt = "";
+    number.className = "file-number";
+    number.textContent = index + 1;
+    name.title = file.name;
+    name.textContent = file.name;
+    card.append(image, number, name);
+    imageList.append(card);
+  });
 }
 
 async function updateAudioDetails() {
@@ -100,7 +115,7 @@ async function updateAudioDetails() {
 }
 
 function updateFormatHelp() {
-  const [width, height] = dimensions(formatInput.value);
+  const [width, height] = dimensions(formatInput.value, qualityInput.value);
   formatHelp.textContent = `${width} × ${height} px`;
 }
 
@@ -120,7 +135,7 @@ async function renderVideo() {
   if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
     throw new Error("Seu navegador não suporta a geração de vídeo. Tente Chrome, Edge ou Firefox.");
   }
-  const [width, height] = dimensions(formatInput.value);
+  const [width, height] = dimensions(formatInput.value, qualityInput.value);
   const fallbackDuration = Number(durationInput.value);
   if (!Number.isFinite(fallbackDuration) || fallbackDuration <= 0) {
     throw new Error("Informe um tempo válido por imagem.");
@@ -138,12 +153,15 @@ async function renderVideo() {
   const audioElement = audioFile ? new Audio(audioUrl) : undefined;
   let audioContext;
   let recorder;
+  let stopped;
 
   try {
     if (audioElement) {
       audioElement.preload = "auto";
       audioElement.loop = false;
-      audioContext = new AudioContext();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error("Seu navegador não suporta áudio no vídeo.");
+      audioContext = new AudioContextClass();
       await audioContext.resume();
       const source = audioContext.createMediaElementSource(audioElement);
       const destination = audioContext.createMediaStreamDestination();
@@ -154,10 +172,15 @@ async function renderVideo() {
 
     const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", ""]
       .find((candidate) => !candidate || MediaRecorder.isTypeSupported(candidate));
-    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const bitrate = qualityInput.value === "standard" ? 6_000_000 : 12_000_000;
+    recorder = new MediaRecorder(stream, {
+      ...(mimeType ? { mimeType } : {}),
+      videoBitsPerSecond: bitrate,
+      audioBitsPerSecond: 192_000,
+    });
     const chunks = [];
     recorder.ondataavailable = (event) => event.data.size && chunks.push(event.data);
-    const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
+    stopped = new Promise((resolve) => { recorder.onstop = resolve; });
     recorder.start(100);
     if (audioElement) {
       audioElement.currentTime = 0;
@@ -176,6 +199,10 @@ async function renderVideo() {
     await stopped;
     return new Blob(chunks, { type: mimeType || "video/webm" });
   } finally {
+    if (recorder?.state === "recording") {
+      recorder.stop();
+      await stopped;
+    }
     audioElement?.pause();
     audioElement?.removeAttribute("src");
     audioContext?.close();
@@ -239,6 +266,8 @@ clearButton.addEventListener("click", () => {
   audioFile = undefined;
   imageInput.value = "";
   audioInput.value = "";
+  imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  imagePreviewUrls = [];
   renderImageList();
   updateAudioDetails();
   resetPreview();
@@ -247,5 +276,6 @@ clearButton.addEventListener("click", () => {
 });
 
 formatInput.addEventListener("change", updateFormatHelp);
+qualityInput.addEventListener("change", updateFormatHelp);
 updateFormatHelp();
 updateRenderState();
