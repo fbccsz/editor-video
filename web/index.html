@@ -3,36 +3,97 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Demonstração web do Editor de Vídeo Automatizado">
-  <title>Editor de Vídeo Automatizado</title>
+  <meta name="description" content="Crie vídeos com imagens e áudio diretamente no navegador.">
+  <title>Frameflow — Editor de vídeo</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header>
-      <p class="eyebrow">Editor de Vídeo Automatizado</p>
-      <h1>Transforme imagens em um vídeo.</h1>
-      <p class="subtitle">Faça um teste diretamente no navegador. Nenhum arquivo é enviado para um servidor.</p>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Frameflow início">
+        <span class="brand-mark">F</span>
+        <span>frameflow</span>
+      </a>
+      <span class="privacy"><span class="privacy-dot"></span> Seus arquivos ficam no navegador</span>
     </header>
 
-    <section class="panel">
-      <label for="images">Imagens (a ordem dos arquivos será preservada)</label>
-      <input id="images" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-      <label for="audio">Locução opcional</label>
-      <input id="audio" type="file" accept="audio/*">
-      <div class="options">
-        <label>Duração por imagem (s)<input id="duration" type="number" min="1" max="30" step="0.5" value="3"></label>
-        <label>Formato<select id="format"><option value="16:9">16:9 (paisagem)</option><option value="9:16">9:16 (vertical)</option><option value="1:1">1:1 (quadrado)</option></select></label>
-      </div>
-      <button id="render" type="button">Gerar vídeo de teste</button>
-      <p id="status" role="status">Selecione pelo menos uma imagem para começar.</p>
+    <section class="intro">
+      <p class="eyebrow">Editor rápido · sem upload</p>
+      <h1>Suas imagens.<br><em>Um vídeo pronto.</em></h1>
+      <p>Monte um slideshow com trilha sonora em poucos cliques. O processamento acontece localmente no seu dispositivo.</p>
     </section>
 
-    <section class="panel preview-panel">
-      <h2>Pré-visualização</h2>
-      <video id="preview" controls playsinline></video>
-      <a id="download" class="download" hidden>Baixar vídeo</a>
+    <section class="workspace" aria-label="Editor de vídeo">
+      <div class="editor-column">
+        <div class="section-heading">
+          <div>
+            <p class="step">01 <span>Conteúdo</span></p>
+            <h2>Adicione seus arquivos</h2>
+          </div>
+          <button id="clear" class="text-button" type="button" hidden>Limpar tudo</button>
+        </div>
+
+        <label class="dropzone" for="images">
+          <span class="drop-icon">＋</span>
+          <strong>Escolher imagens</strong>
+          <span>PNG, JPG ou WEBP · você pode selecionar várias</span>
+          <input id="images" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+        </label>
+        <div id="image-list" class="file-list" aria-live="polite"></div>
+
+        <label class="audio-dropzone" for="audio">
+          <span class="audio-icon">♪</span>
+          <span class="audio-copy"><strong>Adicionar trilha sonora</strong><small id="audio-name">Opcional · MP3, WAV, OGG ou M4A</small></span>
+          <span class="audio-action">Escolher</span>
+          <input id="audio" type="file" accept="audio/*">
+        </label>
+
+        <div class="section-heading settings-heading">
+          <div>
+            <p class="step">02 <span>Configuração</span></p>
+            <h2>Ajuste seu vídeo</h2>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <label class="field">Tempo por imagem
+            <span class="input-with-suffix"><input id="duration" type="number" min="1" max="30" step="0.5" value="3"><span>seg</span></span>
+            <small id="duration-help">Usado quando não há áudio.</small>
+          </label>
+          <label class="field">Formato do vídeo
+            <select id="format">
+              <option value="16:9">16:9 · Paisagem</option>
+              <option value="9:16">9:16 · Vertical</option>
+              <option value="1:1">1:1 · Quadrado</option>
+            </select>
+            <small id="format-help">1280 × 720 px</small>
+          </label>
+        </div>
+
+        <button id="render" class="primary-button" type="button" disabled>
+          <span>Gerar meu vídeo</span><span class="button-arrow">→</span>
+        </button>
+        <p id="status" class="status" role="status">Adicione pelo menos uma imagem para começar.</p>
+      </div>
+
+      <aside class="preview-card">
+        <div class="preview-header">
+          <div><p class="step">03 <span>Resultado</span></p><h2>Pré-visualização</h2></div>
+          <span id="preview-badge" class="preview-badge">Aguardando</span>
+        </div>
+        <div class="video-frame">
+          <div id="empty-preview" class="empty-preview">
+            <span class="play-icon">▶</span>
+            <p>Seu vídeo aparecerá aqui</p>
+            <small>Depois de gerar, você poderá assistir e baixar.</small>
+          </div>
+          <video id="preview" controls playsinline hidden></video>
+        </div>
+        <a id="download" class="download-button" hidden><span>Baixar vídeo</span><span>↓</span></a>
+        <p class="preview-note">O arquivo é gerado em WebM para manter o processamento rápido e privado.</p>
+      </aside>
     </section>
+
+    <footer><span>frameflow</span><span>Feito para testar, criar e compartilhar.</span></footer>
   </main>
   <script src="./app.js"></script>
 </body>
