@@ -1,5 +1,7 @@
 # Frameflow — Editor de Vídeo
 
+**Status:** Ferramenta Python e demonstração web.
+
 Transforme uma sequência de imagens e uma locução em vídeo. O projeto reúne uma ferramenta Python para exportação em MP4 e uma demonstração web que processa os arquivos no próprio navegador.
 
 **[Ver demonstração](https://fbccsz.github.io/editor-video/)** · **[Portfólio](https://www.yshdev.me/#projects)**
@@ -70,3 +72,8 @@ O workflow `.github/workflows/deploy-pages.yml` publica automaticamente a
 pasta `web/` no GitHub Pages a cada atualização da branch principal. No
 repositório, habilite **Settings → Pages → Source: GitHub Actions** caso ainda
 não esteja habilitado.
+
+## Manutenção
+
+Mantido por **ysh** · [Portfólio](https://www.yshdev.me/) · [Contato](mailto:yshdev@outlook.com)
+
