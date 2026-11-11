@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 from pathlib import Path
 from typing import Iterable
 
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageOps
 from moviepy.editor import AudioFileClip, ImageClip, concatenate_videoclips
 
 
@@ -46,12 +48,27 @@ def listar_imagens(pasta: Path) -> list[Path]:
     )
 
 
+def preparar_imagem(caminho: Path, target_resolution: tuple[int, int]) -> np.ndarray:
+    """Corrige orientação, recorta e redimensiona uma imagem uma única vez."""
+    with Image.open(caminho) as original:
+        imagem = ImageOps.exif_transpose(original).convert("RGB")
+        ajustada = ImageOps.fit(
+            imagem,
+            target_resolution,
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+        return np.asarray(ajustada, dtype=np.uint8).copy()
+
+
 def criar_video(
     pasta_imagens: str | Path = "imagens",
     arquivo_audio: str | Path = "locucao.mp3",
     nome_final: str | Path = "video_pronto.mp4",
     resolucao: tuple[int, int] = RESOLUCAO_PADRAO,
     fps: int = 24,
+    preset: str = "fast",
+    crf: int = 18,
 ) -> Path:
     """Monta o vídeo e retorna o caminho do arquivo gerado."""
     pasta = Path(pasta_imagens)
@@ -62,10 +79,18 @@ def criar_video(
         raise FileNotFoundError(f"Pasta de imagens não encontrada: {pasta}")
     if not audio_path.is_file():
         raise FileNotFoundError(f"Arquivo de áudio não encontrado: {audio_path}")
-    if len(resolucao) != 2 or any(valor <= 0 for valor in resolucao):
-        raise ValueError("A resolução deve conter largura e altura positivas.")
+    if (
+        len(resolucao) != 2
+        or any(not isinstance(valor, int) or valor <= 0 for valor in resolucao)
+        or any(valor % 2 for valor in resolucao)
+    ):
+        raise ValueError("A resolução deve conter largura e altura positivas e pares.")
     if fps <= 0:
         raise ValueError("O FPS deve ser maior que zero.")
+    if preset not in {"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow"}:
+        raise ValueError("Preset de codificação inválido.")
+    if not 0 <= crf <= 51:
+        raise ValueError("CRF deve estar entre 0 e 51.")
 
     imagens = listar_imagens(pasta)
     if not imagens:
@@ -80,16 +105,27 @@ def criar_video(
 
             duracao = audio.duration / len(imagens)
             for imagem in imagens:
-                clip = ImageClip(str(imagem)).set_duration(duracao)
-                clips.append(redimensionar_para_preencher(clip, resolucao))
+                frame = preparar_imagem(imagem, resolucao)
+                clips.append(ImageClip(frame).set_duration(duracao))
 
-            video = concatenate_videoclips(clips, method="compose").set_audio(audio)
+            video = concatenate_videoclips(clips, method="chain").set_audio(audio)
             try:
                 video.write_videofile(
                     str(output_path),
                     fps=fps,
                     codec="libx264",
                     audio_codec="aac",
+                    audio_bitrate="192k",
+                    preset=preset,
+                    threads=max(1, os.cpu_count() or 1),
+                    ffmpeg_params=[
+                        "-crf",
+                        str(crf),
+                        "-pix_fmt",
+                        "yuv420p",
+                        "-movflags",
+                        "+faststart",
+                    ],
                     logger=None,
                 )
             finally:
@@ -109,6 +145,13 @@ def _parse_args(args: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--largura", type=int, default=1920)
     parser.add_argument("--altura", type=int, default=1080)
     parser.add_argument("--fps", type=int, default=24)
+    parser.add_argument(
+        "--preset",
+        choices=("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow"),
+        default="fast",
+        help="Velocidade versus compressão do H.264.",
+    )
+    parser.add_argument("--crf", type=int, default=18, help="Qualidade H.264: menor é melhor (0-51).")
     return parser.parse_args(args)
 
 
@@ -122,6 +165,8 @@ def main(args: Iterable[str] | None = None) -> int:
             options.saida,
             (options.largura, options.altura),
             options.fps,
+            options.preset,
+            options.crf,
         )
     except (FileNotFoundError, ValueError, OSError) as error:
         LOGGER.error("Erro: %s", error)
