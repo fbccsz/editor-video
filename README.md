@@ -1,7 +1,17 @@
-# Editor de Vídeo Automatizado
+# Frameflow — Editor de Vídeo
 
-Aplicação Python que transforma uma sequência de imagens e uma locução em um
-vídeo. Há também uma demonstração web que roda inteiramente no navegador.
+Transforme uma sequência de imagens e uma locução em vídeo. O projeto reúne uma ferramenta Python para exportação em MP4 e uma demonstração web que processa os arquivos no próprio navegador.
+
+**[Ver demonstração](https://fbccsz.github.io/editor-video/)** · **[Portfólio](https://www.yshdev.me/#projects)**
+
+## Duas formas de criar
+
+| Versão | Uso | Saída |
+| --- | --- | --- |
+| Python | Processamento local via linha de comando, com controle de resolução, FPS e compressão. | MP4 · H.264 + AAC |
+| Web | Seleção de imagens e áudio, prévia e exportação local no navegador. | WebM |
+
+**Tecnologias:** Python, MoviePy, Pillow, NumPy, FFmpeg e JavaScript. A versão web utiliza APIs de mídia do navegador e não depende de um servidor para processar os arquivos.
 
 ## Teste online
 
